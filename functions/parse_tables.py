@@ -10,10 +10,16 @@ def parse_tables(model, tables):
 
         with open(file=table, mode='r') as file:
             data = file.readlines()
-            
+        
+        # Table name (with spaces in its name and without)
+        if '\'' in data[0]:
+            table_name = re.search('\'.*\'', data[0]).group(0).replace('\'', '')
+        else:
+            table_name = data[0].strip().split(' ')[1]
+    
         row_dict = {
                     'model': model, 
-                    'table_name': table.split('/')[-1].replace('.tmdl', '')
+                    'table_name': table_name
                     }
 
         # Check if table is calculationGroup
