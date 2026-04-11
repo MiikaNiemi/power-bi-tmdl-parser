@@ -45,6 +45,9 @@ def parse_tables(model, tables):
 
                 row_dict['source_type'] = data[row].split('=')[1].strip()
 
+                # Flag for Direct Lake partition
+                is_direct_lake = False
+
                 for c, child_row in enumerate(data[row + 1:]):
                     
                     # Partition attributes
@@ -54,8 +57,12 @@ def parse_tables(model, tables):
                     
                         row_dict[key] = value
 
-                    # Partition source
-                    elif get_indent(child_row) == 3 and child_row.split('=')[0].strip() == 'source':
+                        # If mode is directLake, change the Direct Lake flag
+                        if key == 'mode' and value == 'directLake':
+                            is_direct_lake = True
+
+                    # Partition source (tables besides Direct Lake mode)
+                    elif get_indent(child_row) == 3 and child_row.split('=')[0].strip() == 'source' and not is_direct_lake:
                         source_expression = []
                         current_source_expr_row = row + c + 1
 
@@ -88,6 +95,19 @@ def parse_tables(model, tables):
                         source_expression = re.sub('\\s+', ' ', source_expression)
                         # Assign to row dict
                         row_dict['source_expression'] = 'source = ' + source_expression
+
+                    elif is_direct_lake and get_indent(child_row) == 4 and ':' in child_row:
+                        key = child_row.split(':')[0].strip()
+                        value = child_row.split(':')[1].strip()
+
+                        if key == 'expressionSource':
+                            row_dict['direct_lake_name'] = value.split('-')[1].strip().replace('\'', '')
+
+                        elif key == 'schemaName':
+                            row_dict['direct_lake_schema'] = value
+
+                        elif key == 'entityName':
+                            row_dict['direct_lake_entity'] = value
 
         tables_data.append(row_dict)
 
